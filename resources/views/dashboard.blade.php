@@ -8,7 +8,7 @@
         </div>
     </div>
     <div class="w-1/2 bg-white rounded-xl shadow-md p-4">
-        <h3 class="text-lg font-bold mb-4">April {{ now()->year }}</h3>
+        <h3 class="text-lg font-bold mb-4">{{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('F Y') }}</h3>
         <div class="grid grid-cols-7 gap-2">
             @foreach ($days as $date => $count)
                 <div class="text-center p-2 rounded 
@@ -24,10 +24,10 @@
 <div class="bg-white rounded-xl shadow-md p-4">
     <h3 class="text-xl font-bold mb-4">Notifikasi Data Masuk</h3>
     <ul>
-        @foreach ($recentFiles as $file)
+        @foreach ($files as $file)
             <li class="border-t py-2">
                 [{{ \Carbon\Carbon::parse($file->detected_at)->format('H:i') }}]
-                Data Masuk dari {{ $file->origin ?? 'Unknown' }}
+                Data Masuk dari {{ $file->filename ?? 'Unknown' }}
             </li>
         @endforeach
     </ul>

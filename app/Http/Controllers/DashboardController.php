@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MonitoredFile;
 use Illuminate\Http\Request;
 use App\Models\FileData;
 use Illuminate\Support\Carbon;
@@ -11,7 +12,8 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $filesPerDay = FileData::select(
+
+        $filesPerDay = MonitoredFile::select(
             DB::raw('DATE(detected_at) as date'),
             DB::raw('COUNT(*) as count')
         )->groupBy(DB::raw('DATE(detected_at)'))->pluck('count', 'date');
@@ -25,7 +27,7 @@ class DashboardController extends Controller
             $days[$key] = $filesPerDay[$key] ?? 0;
         }
     
-        $recentFiles = FileData::latest('detected_at')->take(8)->get();
+        $files = MonitoredFile::latest('detected_at')->get();
     
         $originStats = FileData::select('origin', DB::raw('count(*) as total'))
                         ->groupBy('origin')->pluck('total', 'origin');
@@ -33,7 +35,6 @@ class DashboardController extends Controller
                         $filledCount = collect($days)->filter(fn($c) => $c > 0)->count();
                         $emptyCount = collect($days)->filter(fn($c) => $c === 0)->count();                        
     
-        return view('dashboard', compact('days', 'recentFiles', 'originStats', 'filledCount', 'emptyCount'));
+        return view('dashboard', compact('days',  'originStats', 'filledCount', 'emptyCount', 'files'));
     }
 }
-
