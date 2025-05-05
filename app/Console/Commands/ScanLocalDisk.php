@@ -9,73 +9,63 @@ use Carbon\Carbon;
 
 class ScanLocalDisk extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'scan:localdisk';
+    protected $description = 'Scan network folders for new files';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'scan folder lokal untuk file baru';
+    protected array $folderPaths = [];
 
-    /**
-     * Execute the console command.
-     */
-    protected $folderPath = 'C:\backup\BRK\karimun\servanda\PROCEED';
-    
-    // public function __construct()
-    // {
-    //     parent::__construct();
-    //     $this->folderPath = env('MONITOR_FOLDER');
-    // }
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Inisialisasi folder utama (backup dan backupftp)
+        $this->folderPaths = [
+            '\\\\10.20.10.98\\backup\BRK\pekanbaru',     // Folder utama backup
+            // '\\\\10.20.10.98\\backupftp',  // Folder utama backupftp
+        ];
+    }
 
     public function handle()
     {
-        $files = File::allFiles($this->folderPath);
-        foreach ($files as $file) {
-            $exists = MonitoredFile::where('path', $file->getRealPath())->exists();
-            if (!$exists){
-                MonitoredFile::create(['filename' => $file->getFilename(),
-                'path' => $file->getRealPath(),
-                'detected_at' => Carbon::now(),
-            ]);
-            
-            $this->info('File baru ditemukan' . $file->getFilename());
+        foreach ($this->folderPaths as $path) {
+            $this->info("Memindai folder: $path");
+
+            if (!File::exists($path)) {
+                $this->warn("Folder tidak ditemukan atau tidak bisa diakses: $path");
+                continue;
+            }
+
+            // Ambil semua subfolder dalam folder utama
+            $subfolders = File::directories($path);
+
+            foreach ($subfolders as $subfolder) {
+                $this->info("Memindai subfolder: $subfolder");
+
+                // Ambil semua file dalam subfolder
+                $newFolder = $subfolder . DIRECTORY_SEPARATOR . 'NEW';
+
+            if (File::exists($newFolder)) {
+                $files = File::files($newFolder); // hanya ambil file di folder 'new', tidak termasuk subfolder
+
+                foreach ($files as $file) {
+                    $realPath = $file->getRealPath();
+                    $exists = MonitoredFile::where('path', $realPath)->exists();
+
+                    if (!$exists) {
+                        $fileTimestamp = Carbon::createFromTimestamp($file->getMTime()); // waktu terakhir modifikasi file
+
+                        MonitoredFile::create([
+                            'filename' => $file->getFilename(),
+                            'path' => $realPath,
+                            'detected_at' => $fileTimestamp, // gunakan waktu modifikasi file
+                        ]);
+
+                        $this->info('File baru ditemukan: ' . $file->getFilename());
+                    }
+                }
+            }
             }
         }
 
-    //     // ====== Langkah 1: Hapus semua data path yang tidak cocok =======
-    //     $this->deleteOldPathData();
-
-    //     // ====== Langkah 2: Scan file baru di folder baru =======
-    //     $files = File::files($this->folderPath);
-
-    //     foreach ($files as $file) {
-    //         $exists = MonitoredFile::where('path', $file->getRealPath())->exists();
-
-    //         if (!$exists) {
-    //             MonitoredFile::create([
-    //                 'filename' => $file->getFilename(),
-    //                 'path' => $file->getPathname(),
-    //                 'detected_at' => Carbon::now(),
-    //             ]);
-
-    //             $this->info('File baru ditemukan dan ditambahkan: ' . $file->getFilename());
-    //         }
-    //     }
-    // }
-
-    // // Fungsi untuk menghapus data dari path lama
-    // protected function deleteOldPathData()
-    // {
-    //     // Hapus semua data yang path-nya tidak diawali path sekarang
-    //     $deleted = MonitoredFile::where('path', 'not like', $this->folderPath.'%')->delete();
-
-    //     $this->info("Data dari path lama sudah dihapus. Total yang dihapus: $deleted");
-     }
+    }
 }
